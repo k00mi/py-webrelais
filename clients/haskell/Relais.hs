@@ -1,4 +1,4 @@
--- Usage: sendCommand "http://localhost:5000" (Req (Just '5') (Set True))
+-- Usage: sendCommand "http://localhost:5000" (Req (Just 5) (Set True))
 -- Req Nothing Get to get the state of all ports
 -- Will return a Right with a list of Bools inside on success or a Left errormessage on failure
 
@@ -10,14 +10,14 @@ import Network.URI (parseURI)
 
 
 data Action = Set Bool | Get deriving (Show,Eq)
-data Req = Req { port :: Maybe Char, action :: Action } deriving (Show, Eq)
+data Req = Req { port :: Maybe Int, action :: Action } deriving (Show, Eq)
 
 
 sendCommand :: String -> Req -> IO (Either String [Bool])
 sendCommand url (Req p a) = simpleHTTP req >>= getResponseBody >>= return . decode
   where
     urlString = url ++ "/ports" ++ port ++ "?format=raw"
-    port = maybe "" (('/':) . (:[])) p
+    port = maybe "" (('/':) . show) p
     method = case a of
               Get       -> GET
               Set True  -> POST
