@@ -16,7 +16,7 @@ data Req = Req { port :: Maybe Int, action :: Action } deriving (Show, Eq)
 sendCommand :: String -> Req -> IO (Either String [Bool])
 sendCommand url (Req p a) = simpleHTTP req >>= getResponseBody >>= return . decode
   where
-    urlString = url ++ "/ports" ++ port ++ "?format=raw"
+    urlString = url ++ "/relais" ++ port ++ "?format=raw"
     port = maybe "" (('/':) . show) p
     method = case a of
               Get       -> GET
