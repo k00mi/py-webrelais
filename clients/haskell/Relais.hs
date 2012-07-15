@@ -1,30 +1,38 @@
--- Usage: sendCommand "http://localhost:5000" (Req (Just 5) (Set True))
--- Req Nothing Get to get the state of all ports
+-- Usage: sendCommand "http://localhost:5000" "user" "password" (Cmd (Just 5) (Set True))
+-- to set relais 5 to true
+-- Cmd Nothing Get to get the state of all ports
 -- Will return a Right with a list of Bools inside on success or a Left errormessage on failure
 
 module Relais where
 
 
-import Network.HTTP
-import Network.URI (parseURI)
+import Network.Curl
+import Control.Monad (liftM)
+import Codec.Binary.Base64.String (encode)
 
 
 data Action = Set Bool | Get deriving (Show,Eq)
-data Req = Req { port :: Maybe Int, action :: Action } deriving (Show, Eq)
+data Cmd = Cmd { port :: Maybe Int
+               , action :: Action
+               }
+               deriving (Show, Eq)
 
 
-sendCommand :: String -> Req -> IO (Either String [Bool])
-sendCommand url (Req p a) = simpleHTTP req >>= getResponseBody >>= return . decode
+sendCommand :: String -> String -> String -> Cmd -> IO (Either String [Bool])
+sendCommand url user pw (Cmd p a) = do
+    curl <- initialize
+    let send = do_curl_ curl $ url ++ "/relais" ++ port ++ "?format=raw"
+    liftM (decode . respBody) (send settings :: IO (CurlResponse_ [(String, String)] String))
   where
-    urlString = url ++ "/relais" ++ port ++ "?format=raw"
     port = maybe "" (('/':) . show) p
+    settings = [ CurlCustomRequest method
+               , CurlHttpAuth [HttpAuthBasic]
+               , CurlHttpHeaders ["Authorization: Basic " ++ encode (user ++ ':':pw)]
+               ]
     method = case a of
-              Get       -> GET
-              Set True  -> POST
-              Set False -> DELETE
-    req = case parseURI urlString of
-            Nothing -> error ("sendCommand: Invalid URL: " ++ urlString)
-            Just u  -> mkRequest method u
+              Get       -> "GET"
+              Set True  -> "POST"
+              Set False -> "DELETE"
 
 
 decode xs = if all (\x -> x == '1' || x == '0') xs
