@@ -1,30 +1,30 @@
 -- Usage: sendCommand "http://localhost:5000" "user" "password" (Cmd (Just 5) (Set True))
 -- to set relais 5 to true
--- Cmd Nothing Get to get the state of all ports
+-- Cmd Nothing Get to get the state of all relais
 -- Will return a Right with a list of Bools inside on success or a Left errormessage on failure
 
 module Relais where
 
 
 import Network.Curl
-import Control.Monad (liftM)
 import Codec.Binary.Base64.String (encode)
 
 
 data Action = Set Bool | Get deriving (Show,Eq)
-data Cmd = Cmd { port :: Maybe Int
+data Cmd = Cmd { relais :: Maybe Int
                , action :: Action
                }
                deriving (Show, Eq)
 
 
 sendCommand :: String -> String -> String -> Cmd -> IO (Either String [Bool])
-sendCommand url user pw (Cmd p a) = do
+sendCommand url user pw (Cmd r a) = do
     curl <- initialize
-    let send = do_curl_ curl $ url ++ "/relais" ++ port ++ "?format=raw"
-    liftM (decode . respBody) (send settings :: IO (CurlResponse_ [(String, String)] String))
+    let send = do_curl_ curl $ url ++ "/relais" ++ relais ++ "?format=raw"
+        resp = send settings :: IO (CurlResponse_ [(String, String)] String)
+    fmap (decode . respBody) resp
   where
-    port = maybe "" (('/':) . show) p
+    relais = maybe "" (('/':) . show) r
     settings = [ CurlCustomRequest method
                , CurlHttpAuth [HttpAuthBasic]
                , CurlHttpHeaders ["Authorization: Basic " ++ encode (user ++ ':':pw)]
